@@ -85,10 +85,6 @@ def show_cards(cards, player):
 
 def score_game():
     ''' The game is scored by counting which player had the most books, or all four cards of a rank. '''
-    user_books = []
-    app_books = []
-    rank_value = ''
-
     for rank in cards:
         rank_count = 0
         for user_card in user_cards:
