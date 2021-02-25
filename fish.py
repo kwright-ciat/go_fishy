@@ -1,7 +1,8 @@
 
 ''' A simple implementation of Go Fish
 
-The rules are modified from the standard Go Fish rules:
+The rules are modified from the standard Go Fish rules. For each rule, objects
+are listed with functions having () and lists having [] following the name.
 
 Rule 1: Two player game with user versus computer.
     players = ('user', 'app')
@@ -10,10 +11,11 @@ Rule 2: Each player is dealt seven cards from a 52 card deck at game start.
     deal_cards()
 
 Rule 3: The cards not dealt to the players are put into the pile.
-    pile_cards
+    pile_cards[]
 
 Rule 4: Randomly either the user or the computer has the first turn.
-    random_player()
+    random.choice(players)
+    game_loop()
 
 Rule 5: A guess must be from a the rank of 2s up to Aces and only for the ranks
 held that player.
@@ -30,29 +32,29 @@ are always automatic, and automated boolean determines if user guesses are
     user_guess()
 
 Rule 7: If a guess is correct, then the player get another turn to guess.
-    check_app_guess()
-    check_user_guess()
+    app_turn()
+    user_turn()
     game_loop()
 
 Rule 8: If a guess results in player having four suits of a rank, then a book is scored.
-    score_app()
-    score_user()
+    app_score()
+    user_score()
 
 Rule 9: If a guess is wrong, the player must draw a card from the pile and lose their turn.
     app_draw()
     user_draw()
-    check_app_guess()
-    check_user_guess()
+    app_turn()
+    user_turn()
 
 Rule 10: If the player draws the card guessed, their turn contines, otherwise,
 the it's the other player turn to guess.
-    check_app_guess()
-    check_user_guess()
+    app_turn()
+    user_turn()
 
 Rule 11: When all thirteen books have been scored with all suits of a rank,
 or a player has no more cards, or the pile is empty the game is over.
-    check_app_guess()
-    check_user_guess()
+    app_turn()
+    user_turn()
     check_pile()
 
 Rule 12: When the game is over, the player with the most books scored wins.
@@ -92,7 +94,7 @@ def api_request(url):
     response = requests.request("GET", url, headers={}, data={})
     return response.text
 
-def shuffle_deck():
+def deck_shuffle():
     global deck_id
     ''' Execute an API request to get a new deck of cards and return the deck_id '''
     api_response = api_request("https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1")
@@ -101,7 +103,7 @@ def shuffle_deck():
         print("Deck {} has a total of {} cards.".format(deck_id, deck_size))
     return deck_id
 
-def draw_cards(deck_id):
+def pile_cards_draw(deck_id):
     ''' Execute an API request to draw all cards in the deck to return as the pile of cards to deal '''
     api_response = api_request("https://deckofcardsapi.com/api/deck/{}/draw/?count={}".format(deck_id, deck_size))
     pile_cards = json.loads(api_response)["cards"]
@@ -149,7 +151,7 @@ def user_draw():
     else:
         return False
 
-def deal_cards():
+def deck_deal():
     draw_count = 7
     for card in range(draw_count * 2):
         if card % 2:
@@ -157,7 +159,7 @@ def deal_cards():
         else:
             app_draw()
 
-def show_cards(cards, player):
+def cards_show(cards, player):
     length = len(cards)
     print ("The {} has {} cards:\n".format(player, length))
     print(len(pile_cards),"pile cards left.")
@@ -168,7 +170,7 @@ def show_cards(cards, player):
     for card in sorted_cards:
         print(card)
 
-def score_app():
+def app_score():
     for rank in ranks:
         rank_count = 0
         for app_card in app_cards:
@@ -184,7 +186,7 @@ def score_app():
     if debug:
         print('App books:', app_books)
 
-def score_user():
+def user_score():
     for rank in ranks:
         rank_count = 0
         for user_card in tuple(user_cards):
@@ -200,10 +202,10 @@ def score_user():
     if debug:
         print('User books:', user_books)
 
-def score_game():
+def game_score():
     ''' The game is scored by counting which player had the most books, or all four cards of a rank. '''
-    score_app()
-    score_user()
+    app_score()
+    user_score()
     print('User books: ', user_books)
     if debug: print('User cards: ', user_cards)
     print('App books: ', app_books)
@@ -226,7 +228,7 @@ def app_guess():
     else:
         return False
 
-def check_app_guess():
+def app_turn():
     global playing
     guess = app_guess()
     if not guess: # app has no more cards to make a valid guess
@@ -247,12 +249,12 @@ def check_app_guess():
             drawn_card = app_draw()
             if drawn_card == guess:
                 print('The app has drawn the guessed rank: {}'.format(drawn_card))
-                score_app()
+                app_score()
                 return True
             else:
                 return False
         else:
-            score_app()
+            app_score()
             if caught == 1:
                 print("One of the user's cards got caught. The app keeps guessing...")
             else:
@@ -272,7 +274,7 @@ def user_guess():
     if automated and valid_cards:
         return random.choice(valid_cards)
     else:
-        show_cards(user_cards, players[0])
+        cards_show(user_cards, players[0])
 
     while invalid:
         prompt = 'Enter the rank of the card from this list: {} '.format(valid_cards)
@@ -281,7 +283,7 @@ def user_guess():
             invalid = False
     return guess.upper()
 
-def check_user_guess():
+def user_turn():
     global playing
     guess = user_guess()
     if not guess:
@@ -302,56 +304,56 @@ def check_user_guess():
             drawn_card = user_draw()
             if drawn_card == guess:
                 print('The user has drawn the guessed rank: {}'.format(drawn_card))
-                score_user()
+                user_score()
                 return True
             else:
                 return False
         else:
-            score_user()
+            user_score()
             if caught == 1:
                 print("Nice catch! 1 card caught. Keep guessing...")
             else:
                 print("Nice catch! {} cards caught. Keep guessing...".format(caught))
             return True
 
-def random_player():
-    return random.choice(players)
-
 def game_loop():
     global player
-    player = random_player()
+    player = random.choice(players)
     while playing:
-        show_cards(user_cards, players[0])
+        if debug: cards_show(user_cards, players[0])
         if player == players[0]:
-            catch = check_user_guess()
+            catch = user_turn()
             if not catch:
                 player = players[1]
         else:
-            catch = check_app_guess()
+            catch = app_turn()
             if not catch:
                 player = players[0]
-    score_game()
+    game_score()
 
-def play_game():
+def game_play():
     global app_cards, app_books, user_cards, user_books
     global deck_id, pile_cards, playing
-    deck_id = shuffle_deck()
-    pile_cards = draw_cards(deck_id)
+    deck_id = deck_shuffle()
+    pile_cards = pile_cards_draw(deck_id)
     app_cards.clear()
     user_cards.clear()
     app_books.clear()
     user_books.clear()
-    deal_cards()
-    if debug: show_cards(user_cards, 'user')
-    if debug: show_cards(app_cards, 'app')
+    deck_deal()
+    if debug: cards_show(user_cards, 'user')
+    if debug: cards_show(app_cards, 'app')
     playing = True
     game_loop()
 
 if __name__=='__main__':
 
     while 1:
-        answer = input('Do you want to play "Go Fish"? (y/n)').lower()
+        answer = input('Do you want to play "Go Fish"? (y/n/a) ').lower()
         if answer and answer[0]== 'y':
-            play_game()
+            game_play()
+        elif answer and answer[0]== 'a':
+            automated = True
+            game_play()
         else:
             break
