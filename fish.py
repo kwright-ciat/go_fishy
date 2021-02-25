@@ -1,4 +1,4 @@
-#!/usr/bin/python
+
 ''' A simple implementation of Go Fish
 
 The rules are modified from the standard Go Fish rules:
